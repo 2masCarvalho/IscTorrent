@@ -4,20 +4,15 @@ import java.util.List;
 public class Main {
 
     public static void main(String[] args) {
-        // Define o caminho para o ficheiro que desejas testar
-        File testFile = new File("files/On Sight.mp3");  // Substitui pelo caminho real do ficheiro de teste
+        File testFile = new File("files/On Sight.mp3");
 
-        // Verifica se o ficheiro existe
         if (testFile.exists() && testFile.isFile()) {
-            // Cria a lista de blocos a partir do ficheiro
-            List<FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
 
-            // Exibe o número de blocos gerados
+            List<FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
             System.out.println("Número de blocos gerados: " + blockList.size());
 
-            // Exibe as informações de cada bloco
             for (FileBlockRequestMessage block : blockList) {
-                System.out.println(block);  // O método toString() da classe FileBlockRequestMessage será chamado
+                System.out.println(block);
             }
         } else {
             System.out.println("Ficheiro de teste não encontrado ou não é um ficheiro válido.");

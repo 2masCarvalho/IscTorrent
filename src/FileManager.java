@@ -9,7 +9,6 @@ public class FileManager {
         this.folderPath = folderPath;
     }
 
-    // Função para ler ficheiros da pasta de trabalho
     public File[] getFiles() {
         File folder = new File(folderPath);
         if (folder.exists() && folder.isDirectory()) {

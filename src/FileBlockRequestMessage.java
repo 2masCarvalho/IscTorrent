@@ -1,8 +1,8 @@
 public class FileBlockRequestMessage {
 
-    private String fileName;  // Nome ou hash do ficheiro
-    private long offset;      // Offset do bloco no ficheiro (posição inicial)
-    private int length;       // Tamanho do bloco
+    private String fileName;
+    private long offset;
+    private int length;
 
     // Construtor
     public FileBlockRequestMessage(String fileName, long offset, int length) {
@@ -11,7 +11,6 @@ public class FileBlockRequestMessage {
         this.length = length;
     }
 
-    // Getters para obter as informações do bloco
     public String getFileName() {
         return fileName;
     }
