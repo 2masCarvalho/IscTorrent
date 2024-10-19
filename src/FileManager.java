@@ -19,7 +19,6 @@ public class FileManager {
                 }
             });
         } else {
-            System.out.println("A pasta de trabalho não existe ou não é um diretório.");
             return new File[0];
         }
     }

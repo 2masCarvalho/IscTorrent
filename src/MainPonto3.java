@@ -1,7 +1,7 @@
 import java.io.File;
 import java.util.List;
 
-public class Main {
+public class MainPonto3 {
 
     public static void main(String[] args) {
         File testFile = new File("files/On Sight.mp3");
