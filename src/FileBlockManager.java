@@ -11,11 +11,11 @@ public class FileBlockManager {
         long fileSize = file.length();
         String fileName = file.getName();
 
-        long posicao = 0;
-        while (posicao < fileSize) {
-            int blockSize = (int) Math.min(tamanhoBloco, fileSize - posicao);
-            blockList.add(new FileBlockRequestMessage(fileName, posicao, blockSize));
-            posicao += blockSize;
+        long offset = 0;
+        while (offset < fileSize) {
+            int blockSize = (int) Math.min(tamanhoBloco, fileSize - offset);
+            blockList.add(new FileBlockRequestMessage(fileName, offset, blockSize));
+            offset += blockSize;
         }
 
         return blockList;
