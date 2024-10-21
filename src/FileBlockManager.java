@@ -4,18 +4,18 @@ import java.util.List;
 
 public class FileBlockManager {
 
-    private static final int BLOCK_SIZE = 10240;
+    private static final int tamanhoBloco = 10240;
 
     public static List<FileBlockRequestMessage> createBlockList(File file) {
         List<FileBlockRequestMessage> blockList = new ArrayList<>();
         long fileSize = file.length();
         String fileName = file.getName();
 
-        long offset = 0;
-        while (offset < fileSize) {
-            int blockSize = (int) Math.min(BLOCK_SIZE, fileSize - offset);
-            blockList.add(new FileBlockRequestMessage(fileName, offset, blockSize));
-            offset += blockSize;
+        long posicao = 0;
+        while (posicao < fileSize) {
+            int blockSize = (int) Math.min(tamanhoBloco, fileSize - posicao);
+            blockList.add(new FileBlockRequestMessage(fileName, posicao, blockSize));
+            posicao += blockSize;
         }
 
         return blockList;
