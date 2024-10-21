@@ -56,7 +56,15 @@ public class GUI {
             }
         });
 
+        connectNodeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showConnectionDialog();
+            }
+        });
+
         frame.setVisible(true);
+
         loadFilesFromFolder();
     }
 
@@ -71,5 +79,53 @@ public class GUI {
         } else {
             JOptionPane.showMessageDialog(null, "Nenhum ficheiro encontrado na pasta.");
         }
+    }
+
+    private void showConnectionDialog() {
+
+        JDialog connectionDialog = new JDialog();
+        connectionDialog.setTitle("Conectar a um Nó");
+        connectionDialog.setSize(300, 150);
+        connectionDialog.setLayout(new GridLayout(3, 2));
+
+        JLabel addressLabel = new JLabel("Endereço:");
+        JTextField addressField = new JTextField("");
+        JLabel portLabel = new JLabel("Porta:");
+        JTextField portField = new JTextField("");
+
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Cancelar");
+
+        connectionDialog.add(addressLabel);
+        connectionDialog.add(addressField);
+        connectionDialog.add(portLabel);
+        connectionDialog.add(portField);
+        connectionDialog.add(cancelButton);
+        connectionDialog.add(okButton);
+
+        cancelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                connectionDialog.dispose();
+            }
+        });
+
+        okButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String address = addressField.getText();
+                String port = portField.getText();
+                System.out.println("Conectando ao endereço: " + address + " na porta: " + port);
+
+                connectionDialog.dispose();
+            }
+        });
+
+        connectionDialog.setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        String folderPath = "files";
+        GUI gui = new GUI(folderPath);
     }
 }
