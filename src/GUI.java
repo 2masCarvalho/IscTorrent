@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.List;
 
 public class GUI {
 
@@ -56,6 +57,24 @@ public class GUI {
             }
         });
 
+        unloadButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String selectedFile = resultList.getSelectedValue();
+                if (selectedFile != null) {
+                    File testFile = new File("files/" + selectedFile);
+                    if (testFile.exists() && testFile.isFile()) {
+                        List<FileBlockManager.FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
+                        FileBlockManager.iniciarDescarregamento(blockList);
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "Ficheiro não encontrado.");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Nenhum ficheiro selecionado.");
+                }
+            }
+        });
+
         connectNodeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -64,7 +83,6 @@ public class GUI {
         });
 
         frame.setVisible(true);
-
         loadFilesFromFolder();
     }
 
