@@ -1,15 +1,16 @@
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class FileBlockManager {
 
     private static final int tamanhoBloco = 10240;
-    private static final int numThreads = 5;
+    private static int blocosDescarregados = 0;
 
-    private static ExecutorService threadPool = Executors.newFixedThreadPool(numThreads);
+    public static synchronized void incrementarBlocosDescarregados() {
+        blocosDescarregados++;
+        System.out.println("Blocos descarregados até agora: " + blocosDescarregados);
+    }
 
     public static List<FileBlockRequestMessage> createBlockList(File file) {
         List<FileBlockRequestMessage> blockList = new ArrayList<>();
@@ -28,7 +29,8 @@ public class FileBlockManager {
 
     public static void iniciarDescarregamento(List<FileBlockRequestMessage> blockList) {
         for (FileBlockRequestMessage block : blockList) {
-            threadPool.submit(new DownloadTask(block)); // Submete cada bloco para ser descarregado numa thread
+            Thread thread = new Thread(new DownloadTask(block));
+            thread.start();
         }
     }
 
@@ -75,6 +77,12 @@ public class FileBlockManager {
         @Override
         public void run() {
             System.out.println("A descarregar o bloco: " + block);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            incrementarBlocosDescarregados();
         }
     }
 
@@ -84,7 +92,6 @@ public class FileBlockManager {
         if (testFile.exists() && testFile.isFile()) {
             List<FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
             System.out.println("Número de blocos gerados: " + blockList.size());
-
             FileBlockManager.iniciarDescarregamento(blockList);
         } else {
             System.out.println("Ficheiro de teste não encontrado ou não é um ficheiro válido.");
