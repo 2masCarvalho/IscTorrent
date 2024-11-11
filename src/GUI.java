@@ -3,17 +3,44 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.net.InetAddress;
 import java.util.List;
-
+//NODE
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.io.IOException;
 public class GUI {
 
     private DefaultListModel<String> listModel;
     private JList<String> resultList;
     private FileManager fileManager;
+    private Node node;
 
-    public GUI(String folderPath) {
+    public GUI(String folderPath, int localPort) {
+        try{
+            String localIPAddress = InetAddress.getLocalHost().getHostAddress();
+            System.out.println("IP Local: " + localIpAddress);
+            //Criação do node
+            node = new Node(localIPAddress, localPort, "MyNode");
+            createAndShowGUI();
+            Thread serverThread = new Thread(new Runnable() {
+                @Override
+                    public void run() {
+                        try {
+                            node.startServer();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    });
+            serverThread.start();
+        }catch (UnknownHostException e) {
+            System.err.println("Erro ao obter o endereço IP local.");
+            e.printStackTrace();
+        }
+
         fileManager = new FileManager(folderPath);
-        createAndShowGUI();
+
     }
 
     public void createAndShowGUI() {
