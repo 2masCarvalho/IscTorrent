@@ -1,14 +1,12 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
-import java.net.InetAddress;
-import java.util.List;
-//NODE
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.io.IOException;
+import java.util.List;
+
 public class GUI {
 
     private DefaultListModel<String> listModel;
@@ -17,30 +15,29 @@ public class GUI {
     private Node node;
 
     public GUI(String folderPath, int localPort) {
-        try{
+        try {
             String localIPAddress = InetAddress.getLocalHost().getHostAddress();
-            System.out.println("IP Local: " + localIpAddress);
-            //Criação do node
+            System.out.println("IP Local: " + localIPAddress);
+
+            // Criação do node
             node = new Node(localIPAddress, localPort, "MyNode");
+            fileManager = new FileManager(folderPath);
+
             createAndShowGUI();
-            Thread serverThread = new Thread(new Runnable() {
-                @Override
-                    public void run() {
-                        try {
-                            node.startServer();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    });
+
+            // Inicia o servidor em uma nova thread
+            Thread serverThread = new Thread(() -> {
+                try {
+                    node.startServer();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
             serverThread.start();
-        }catch (UnknownHostException e) {
+        } catch (UnknownHostException e) {
             System.err.println("Erro ao obter o endereço IP local.");
             e.printStackTrace();
         }
-
-        fileManager = new FileManager(folderPath);
-
     }
 
     public void createAndShowGUI() {
@@ -49,6 +46,14 @@ public class GUI {
         frame.setSize(500, 300);
         frame.setLayout(new BorderLayout());
 
+        // Centraliza a janela na tela
+        int screenWidth = 1920;
+        int screenHeight = 1080;
+        int frameWidth = frame.getWidth();
+        int frameHeight = frame.getHeight();
+        frame.setLocation((screenWidth - frameWidth) / 2, (screenHeight - frameHeight) / 2);
+
+        // Painel superior com campo de pesquisa
         JPanel topPanel = new JPanel(new BorderLayout());
         JLabel searchLabel = new JLabel("Texto a procurar:");
         JTextField searchField = new JTextField(20);
@@ -58,11 +63,13 @@ public class GUI {
         topPanel.add(searchField, BorderLayout.CENTER);
         topPanel.add(searchButton, BorderLayout.EAST);
 
+        // Lista de resultados
         listModel = new DefaultListModel<>();
         resultList = new JList<>(listModel);
         resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scrollPanel = new JScrollPane(resultList);
 
+        // Painel de botões
         JPanel buttonPanel = new JPanel(new GridLayout(2, 1));
         JButton unloadButton = new JButton("Descarregar");
         JButton connectNodeButton = new JButton("Ligar a Nó");
@@ -74,40 +81,28 @@ public class GUI {
         frame.add(scrollPanel, BorderLayout.CENTER);
         frame.add(buttonPanel, BorderLayout.EAST);
 
+        // Botão para atualizar lista de arquivos
         JButton updateButton = new JButton("Atualizar Ficheiros");
         frame.add(updateButton, BorderLayout.SOUTH);
 
-        updateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                loadFilesFromFolder();
-            }
-        });
+        updateButton.addActionListener(e -> loadFilesFromFolder());
 
-        unloadButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String selectedFile = resultList.getSelectedValue();
-                if (selectedFile != null) {
-                    File testFile = new File("files/" + selectedFile);
-                    if (testFile.exists() && testFile.isFile()) {
-                        List<FileBlockManager.FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
-                        FileBlockManager.iniciarDescarregamento(blockList);
-                    } else {
-                        JOptionPane.showMessageDialog(frame, "Ficheiro não encontrado.");
-                    }
+        unloadButton.addActionListener(e -> {
+            String selectedFile = resultList.getSelectedValue();
+            if (selectedFile != null) {
+                File testFile = new File("files/" + selectedFile);
+                if (testFile.exists() && testFile.isFile()) {
+                    List<FileBlockManager.FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
+                    FileBlockManager.iniciarDescarregamento(blockList);
                 } else {
-                    JOptionPane.showMessageDialog(frame, "Nenhum ficheiro selecionado.");
+                    JOptionPane.showMessageDialog(frame, "Ficheiro não encontrado.");
                 }
+            } else {
+                JOptionPane.showMessageDialog(frame, "Nenhum ficheiro selecionado.");
             }
         });
 
-        connectNodeButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                showConnectionDialog();
-            }
-        });
+        connectNodeButton.addActionListener(e -> showConnectionDialog());
 
         frame.setVisible(true);
         loadFilesFromFolder();
@@ -127,16 +122,15 @@ public class GUI {
     }
 
     private void showConnectionDialog() {
-
         JDialog connectionDialog = new JDialog();
         connectionDialog.setTitle("Conectar a um Nó");
         connectionDialog.setSize(300, 150);
         connectionDialog.setLayout(new GridLayout(3, 2));
 
         JLabel addressLabel = new JLabel("Endereço:");
-        JTextField addressField = new JTextField("");
+        JTextField addressField = new JTextField();
         JLabel portLabel = new JLabel("Porta:");
-        JTextField portField = new JTextField("");
+        JTextField portField = new JTextField();
 
         JButton okButton = new JButton("OK");
         JButton cancelButton = new JButton("Cancelar");
@@ -148,29 +142,31 @@ public class GUI {
         connectionDialog.add(cancelButton);
         connectionDialog.add(okButton);
 
-        cancelButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                connectionDialog.dispose();
-            }
-        });
+        cancelButton.addActionListener(e -> connectionDialog.dispose());
 
-        okButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String address = addressField.getText();
-                String port = portField.getText();
-                System.out.println("Conectando ao endereço: " + address + " na porta: " + port);
+        okButton.addActionListener(e -> {
+            String address = addressField.getText();
+            String port = portField.getText();
+            System.out.println("Conectando ao endereço: " + address + " na porta: " + port);
 
-                connectionDialog.dispose();
+            // Conecta-se ao nó especificado
+            try {
+                node.connectToNode(address, Integer.parseInt(port));
+                JOptionPane.showMessageDialog(null, "Conectado ao nó " + address + ":" + port);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Porta inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
+
+            connectionDialog.dispose();
         });
 
         connectionDialog.setVisible(true);
     }
 
+
     public static void main(String[] args) {
         String folderPath = "files";
-        GUI gui = new GUI(folderPath);
+        int localPort = 8081;
+        new GUI(folderPath, localPort);
     }
 }
