@@ -53,36 +53,45 @@ public class Node {
     // Método para lidar com conexões de clientes (outros nós conectando)
     private void handleClientConnection(Socket clientSocket) {
         try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+            ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
 
-            // Leitura inicial para identificar o nó conectado
-            String nodeName = in.readLine();
-            System.out.println("Conectado ao nó: " + nodeName);
+            // Envia o nome do nó local para o nó conectado
+            out.writeObject(nodeName);
+            out.flush();
+
+            // Recebe o nome do nó remoto
+            String remoteNodeName = (String) in.readObject();
+            System.out.println("Conectado ao nó: " + remoteNodeName);
 
             // Adiciona o nó à lista de conexões
             NodeInfo newNode = new NodeInfo(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort(), clientSocket);
             connectedNodes.add(newNode);
 
             // Escuta mensagens do cliente
-            String message;
-            while ((message = in.readLine()) != null) {
-                System.out.println("Mensagem recebida de " + nodeName + ": " + message);
-                out.println("Eco: " + message); // Exemplo de eco de mensagem
+            while (true) {
+                Object message = in.readObject();
+                if (message instanceof String) {
+                    System.out.println("Mensagem recebida de " + remoteNodeName + ": " + message);
+                    out.writeObject("Eco: " + message); // Envia resposta de eco
+                    out.flush();
+                }
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             System.err.println("Erro ao lidar com conexão de cliente: " + e.getMessage());
         }
     }
 
     // Método para escutar mensagens de um nó conectado
     private void listenForMessages(Socket socket) {
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-            String message;
-            while ((message = in.readLine()) != null) {
-                System.out.println("Mensagem recebida: " + message);
+        try (ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
+            while (true) {
+                Object message = in.readObject();
+                if (message instanceof String) {
+                    System.out.println("Mensagem recebida: " + message);
+                }
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             System.err.println("Erro ao escutar mensagens: " + e.getMessage());
         }
     }
@@ -91,8 +100,9 @@ public class Node {
     public void sendMessageToAll(String message) {
         for (NodeInfo nodeInfo : connectedNodes) {
             try {
-                PrintWriter out = new PrintWriter(nodeInfo.getSocket().getOutputStream(), true);
-                out.println(message);
+                ObjectOutputStream out = new ObjectOutputStream(nodeInfo.getSocket().getOutputStream());
+                out.writeObject(message);
+                out.flush();
             } catch (IOException e) {
                 System.err.println("Erro ao enviar mensagem: " + e.getMessage());
             }
