@@ -1,3 +1,4 @@
+import javax.swing.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -33,16 +34,19 @@ public class Node {
     }
 
     // Método para estabelecer conexão com outro nó
-    public void connectToNode(String ipAddress, int port) {
+    public boolean connectToNode(String ipAddress, int port) {
         try {
-            Socket socket = new Socket(ipAddress, port);
+            Socket socket = new Socket();
+            socket.connect(new InetSocketAddress(ipAddress, port), 2000); // Timeout de 2 segundos para a conexão
             connectedNodes.add(new NodeInfo(ipAddress, port, socket));
             System.out.println("Conectado ao nó " + ipAddress + ":" + port);
 
             // Inicia thread para escutar mensagens do nó conectado
             threadPool.submit(() -> listenForMessages(socket));
+            return true; // Conexão bem-sucedida
         } catch (IOException e) {
             System.err.println("Erro ao conectar ao nó: " + e.getMessage());
+            return false; // Conexão falhou
         }
     }
 
@@ -57,7 +61,8 @@ public class Node {
             System.out.println("Conectado ao nó: " + nodeName);
 
             // Adiciona o nó à lista de conexões
-            connectedNodes.add(new NodeInfo(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort(), clientSocket));
+            NodeInfo newNode = new NodeInfo(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort(), clientSocket);
+            connectedNodes.add(newNode);
 
             // Escuta mensagens do cliente
             String message;
@@ -94,6 +99,14 @@ public class Node {
         }
     }
 
+    // Método para imprimir todos os nós conectados
+    public void printConnectedNodes() {
+        System.out.println("Nós conectados:");
+        for (NodeInfo nodeInfo : connectedNodes) {
+            System.out.println(" - " + nodeInfo.getIpAddress() + ":" + nodeInfo.getPort());
+        }
+    }
+
     // Classe auxiliar para armazenar informações dos nós conectados
     private static class NodeInfo {
         private String ipAddress;
@@ -116,29 +129,6 @@ public class Node {
 
         public Socket getSocket() {
             return socket;
-        }
-    }
-
-    public static void main(String[] args) {
-        try {
-            String localIPAddress = InetAddress.getLocalHost().getHostAddress();
-            Node node = new Node(localIPAddress, 8081, "Node1");
-
-            // Inicia o servidor em uma thread separada
-            new Thread(() -> {
-                try {
-                    node.startServer();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }).start();
-
-            // Conecta a outro nó
-            node.connectToNode("127.0.0.1", 8082); // Exemplo: conectar a outro nó na mesma máquina
-            node.sendMessageToAll("Hello, other nodes!");
-
-        } catch (UnknownHostException e) {
-            System.err.println("Erro ao obter endereço IP local: " + e.getMessage());
         }
     }
 }

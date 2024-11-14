@@ -1,6 +1,5 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -23,7 +22,7 @@ public class GUI {
             node = new Node(localIPAddress, localPort, "MyNode");
             fileManager = new FileManager(folderPath);
 
-            createAndShowGUI();
+            createAndShowGUI(localIPAddress, localPort);
 
             // Inicia o servidor em uma nova thread
             Thread serverThread = new Thread(() -> {
@@ -40,8 +39,8 @@ public class GUI {
         }
     }
 
-    public void createAndShowGUI() {
-        JFrame frame = new JFrame("IscTorrent");
+    public void createAndShowGUI(String ipAddress, int port) {
+        JFrame frame = new JFrame("IscTorrent - IP: " + ipAddress + " Porta: " + port);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(500, 300);
         frame.setLayout(new BorderLayout());
@@ -147,12 +146,17 @@ public class GUI {
         okButton.addActionListener(e -> {
             String address = addressField.getText();
             String port = portField.getText();
-            System.out.println("Conectando ao endereço: " + address + " na porta: " + port);
+            System.out.println("Tentando conectar ao endereço: " + address + " na porta: " + port);
 
-            // Conecta-se ao nó especificado
             try {
-                node.connectToNode(address, Integer.parseInt(port));
-                JOptionPane.showMessageDialog(null, "Conectado ao nó " + address + ":" + port);
+                boolean isConnected = node.connectToNode(address, Integer.parseInt(port));
+                if (isConnected) {
+                    JOptionPane.showMessageDialog(null, "Conectado ao nó " + address + ":" + port);
+                    node.printConnectedNodes(); // Imprime os nós conectados após a conexão
+                } else {
+                    JOptionPane.showMessageDialog(null, "Não foi possível conectar ao nó " + address + ":" + port,
+                            "Erro de Conexão", JOptionPane.ERROR_MESSAGE);
+                }
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(null, "Porta inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
@@ -163,10 +167,26 @@ public class GUI {
         connectionDialog.setVisible(true);
     }
 
-
     public static void main(String[] args) {
-        String folderPath = "files";
-        int localPort = 8081;
-        new GUI(folderPath, localPort);
+        // Define o caminho das duas pastas e as portas para as instâncias
+        String folderPath1 = "files1";
+        int port1 = 8081;
+
+        String folderPath2 = "files2";
+        int port2 = 8082;
+
+        // Cria e inicia a primeira instância em uma nova thread
+        Thread instance1 = new Thread(() -> {
+            GUI gui1 = new GUI(folderPath1, port1);
+            gui1.node.printConnectedNodes(); // Imprime os nós conectados para a primeira instância
+        });
+        instance1.start();
+
+        // Cria e inicia a segunda instância em uma nova thread
+        Thread instance2 = new Thread(() -> {
+            GUI gui2 = new GUI(folderPath2, port2);
+            gui2.node.printConnectedNodes(); // Imprime os nós conectados para a segunda instância
+        });
+        instance2.start();
     }
 }

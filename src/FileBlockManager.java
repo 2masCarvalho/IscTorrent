@@ -6,10 +6,11 @@ public class FileBlockManager {
 
     private static final int tamanhoBloco = 10240;
     private static int blocosDescarregados = 0;
+    private static int totalBlocos = 0;
 
     public static synchronized void incrementarBlocosDescarregados() {
         blocosDescarregados++;
-        System.out.println("Blocos descarregados até agora: " + blocosDescarregados);
+        System.out.println("Progresso: " + blocosDescarregados + "/" + totalBlocos + " blocos descarregados.");
     }
 
     public static List<FileBlockRequestMessage> createBlockList(File file) {
@@ -24,6 +25,7 @@ public class FileBlockManager {
             offset += blockSize;
         }
 
+        totalBlocos = blockList.size(); // Define o número total de blocos
         return blockList;
     }
 
@@ -78,7 +80,7 @@ public class FileBlockManager {
         public void run() {
             System.out.println("A descarregar o bloco: " + block);
             try {
-                Thread.sleep(100);
+                Thread.sleep(100); // Simula tempo de descarregamento
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -87,11 +89,11 @@ public class FileBlockManager {
     }
 
     public static void main(String[] args) {
-        File testFile = new File("files/On Sight.mp3");
+        File testFile = new File("files2/ficheiro de teste.txt");
 
         if (testFile.exists() && testFile.isFile()) {
             List<FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
-            System.out.println("Número de blocos gerados: " + blockList.size());
+            System.out.println("Número total de blocos a descarregar: " + totalBlocos);
             FileBlockManager.iniciarDescarregamento(blockList);
         } else {
             System.out.println("Ficheiro de teste não encontrado ou não é um ficheiro válido.");
