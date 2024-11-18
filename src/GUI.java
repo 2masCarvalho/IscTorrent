@@ -1,6 +1,6 @@
 import javax.swing.*;
-import java.awt.*;
-import java.io.File;
+        import java.awt.*;
+        import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.io.IOException;
@@ -11,7 +11,7 @@ public class GUI {
     private DefaultListModel<String> listModel;
     private JList<String> resultList;
     private FileManager fileManager;
-    private Node node;
+    Node node;
 
     public GUI(String folderPath, int localPort) {
         try {
@@ -20,7 +20,7 @@ public class GUI {
             System.out.println("IP Local: " + localIPAddress);
 
             // Criação do node
-            node = new Node(localIPAddress, localPort, "MyNode");
+            node = new Node(localIPAddress, localPort, "MyNode", folderPath);
             fileManager = new FileManager(folderPath);
 
             // Cria e exibe a interface gráfica
@@ -88,6 +88,27 @@ public class GUI {
 
         frame.setVisible(true);
         loadFilesFromFolder();
+
+        searchButton.addActionListener(e -> {
+            String keyword = searchField.getText();
+            if (keyword.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Digite uma palavra-chave para buscar.");
+                return;
+            }
+
+            // Envia a mensagem de pesquisa para os nós conectados e busca localmente
+            List<FileSearchResult> results = node.searchFilesAcrossNodes(keyword);
+
+            // Atualiza a lista de resultados
+            listModel.clear();
+            if (results.isEmpty()) {
+                listModel.addElement("Nenhum arquivo encontrado.");
+            } else {
+                for (FileSearchResult result : results) {
+                    listModel.addElement(result.getFileName() + " (hash: " + result.getHash() + ")");
+                }
+            }
+        });
     }
 
     // Carrega arquivos da pasta para exibir na lista
@@ -167,7 +188,7 @@ public class GUI {
 
         connectionDialog.setVisible(true);
     }
-
+/*
     public static void main(String[] args) {
 
         String folderPath1 = "files1";
@@ -186,4 +207,5 @@ public class GUI {
             gui2.node.printConnectedNodes();
         }).start();
     }
+ */
 }

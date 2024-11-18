@@ -1,8 +1,6 @@
-import javax.swing.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 public class Node {
     private String ipAddress;
@@ -10,17 +8,17 @@ public class Node {
     private String nodeName;
     private Set<NodeInfo> connectedNodes; // Armazena as informações dos nós conectados
     private ServerSocket serverSocket;
-    private ExecutorService threadPool;
+    private FileManager fileManager; // Gerenciador de arquivos
 
-    public Node(String ipAddress, int port, String nodeName) {
+    public Node(String ipAddress, int port, String nodeName, String folderPath) {
         this.ipAddress = ipAddress;
         this.port = port;
         this.nodeName = nodeName;
         this.connectedNodes = new HashSet<>();
-        this.threadPool = Executors.newFixedThreadPool(5); // Ajustável conforme necessidade
+        this.fileManager = new FileManager(folderPath); // Inicializa o gerenciador de arquivos
     }
 
-    // Metodo para iniciar o servidor e aceitar conexões de outros nós
+    // Método para iniciar o servidor e aceitar conexões de outros nós
     public void startServer() throws IOException {
         serverSocket = new ServerSocket(port);
         System.out.println("Servidor iniciado na porta " + port);
@@ -29,20 +27,29 @@ public class Node {
         while (true) {
             Socket clientSocket = serverSocket.accept();
             System.out.println("Nova conexão de " + clientSocket.getInetAddress());
-            threadPool.submit(() -> handleClientConnection(clientSocket));
+
+            // Cria uma thread individual para cada conexão
+            new Thread(() -> handleClientConnection(clientSocket)).start();
         }
     }
 
-    // Metodo para estabelecer conexão com outro nó
+    // Método para estabelecer conexão com outro nó
     public boolean connectToNode(String ipAddress, int port) {
         try {
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(ipAddress, port), 2000); // Timeout de 2 segundos para a conexão
+
+            // Envia a mensagem NewConnectionRequest ao conectar
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            out.writeObject(new NewConnectionRequest(nodeName));
+            out.flush();
+
+            // Adiciona o nó conectado à lista de conexões
             connectedNodes.add(new NodeInfo(ipAddress, port, socket));
             System.out.println("Conectado ao nó " + ipAddress + ":" + port);
 
-            // Inicia thread para escutar mensagens do nó conectado
-            threadPool.submit(() -> listenForMessages(socket));
+            // Cria uma thread individual para escutar mensagens do nó conectado
+            new Thread(() -> listenForMessages(socket)).start();
             return true; // Conexão bem-sucedida
         } catch (IOException e) {
             System.err.println("Erro ao conectar ao nó: " + e.getMessage());
@@ -50,29 +57,28 @@ public class Node {
         }
     }
 
-    // Metodo para lidar com conexões de clientes (outros nós conectando)
+    // Método para lidar com conexões de clientes (outros nós conectando)
     private void handleClientConnection(Socket clientSocket) {
-        try {
-            ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-            ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+        try (ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
 
-            out.writeObject(nodeName);
-            out.flush();
-
-            // Recebe o nome do nó remoto
-            String remoteNodeName = (String) in.readObject();
-            System.out.println("Conectado ao nó: " + remoteNodeName);
-
-            // Adiciona o nó à lista de conexões
-            NodeInfo newNode = new NodeInfo(clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort(), clientSocket);
-            connectedNodes.add(newNode);
+            // Recebe a mensagem NewConnectionRequest
+            Object receivedObject = in.readObject();
+            if (receivedObject instanceof NewConnectionRequest) {
+                NewConnectionRequest request = (NewConnectionRequest) receivedObject;
+                System.out.println("Recebido: " + request);
+            }
 
             // Escuta mensagens do cliente
             while (true) {
                 Object message = in.readObject();
-                if (message instanceof String) {
-                    System.out.println("Mensagem recebida de " + remoteNodeName + ": " + message);
-                    out.writeObject("Eco: " + message); // Envia resposta de eco
+                if (message instanceof WordSearchMessage) {
+                    WordSearchMessage searchMessage = (WordSearchMessage) message;
+                    System.out.println("Pesquisa recebida: " + searchMessage.getKeyword());
+
+                    // Procura arquivos correspondentes
+                    List<FileSearchResult> results = searchFiles(searchMessage.getKeyword());
+                    out.writeObject(results);
                     out.flush();
                 }
             }
@@ -81,7 +87,7 @@ public class Node {
         }
     }
 
-    // Metodo para escutar mensagens de um nó conectado
+    // Método para escutar mensagens de um nó conectado
     private void listenForMessages(Socket socket) {
         try (ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
             while (true) {
@@ -95,7 +101,7 @@ public class Node {
         }
     }
 
-    // Metodo para enviar mensagem a todos os nós conectados
+    // Método para enviar mensagem a todos os nós conectados
     public void sendMessageToAll(String message) {
         for (NodeInfo nodeInfo : connectedNodes) {
             try {
@@ -108,7 +114,53 @@ public class Node {
         }
     }
 
-    // Metodo para imprimir todos os nós conectados
+    // Método para procurar arquivos por palavra-chave localmente
+    private List<FileSearchResult> searchFiles(String keyword) {
+        List<FileSearchResult> results = new ArrayList<>();
+        for (Map.Entry<String, String> entry : fileManager.getFileHashes().entrySet()) {
+            if (entry.getKey().contains(keyword)) {
+                results.add(new FileSearchResult(entry.getKey(), entry.getValue()));
+            }
+        }
+        return results;
+    }
+
+    // Método para pesquisar arquivos em todos os nós conectados
+    public List<FileSearchResult> searchFilesAcrossNodes(String keyword) {
+        List<FileSearchResult> allResults = new ArrayList<>();
+
+        // Adiciona resultados locais
+        allResults.addAll(searchFiles(keyword));
+
+        // Procura nos nós conectados
+        for (NodeInfo nodeInfo : connectedNodes) {
+            try {
+                ObjectOutputStream out = new ObjectOutputStream(nodeInfo.getSocket().getOutputStream());
+                ObjectInputStream in = new ObjectInputStream(nodeInfo.getSocket().getInputStream());
+
+                // Envia mensagem de busca
+                out.writeObject(new WordSearchMessage(keyword));
+                out.flush();
+
+                // Lê resultados
+                Object response = in.readObject();
+                if (response instanceof List<?>) {
+                    List<?> resultList = (List<?>) response;
+                    for (Object obj : resultList) {
+                        if (obj instanceof FileSearchResult) {
+                            allResults.add((FileSearchResult) obj);
+                        }
+                    }
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                System.err.println("Erro ao buscar arquivos no nó: " + e.getMessage());
+            }
+        }
+        return allResults;
+    }
+
+
+    // Método para imprimir todos os nós conectados
     public void printConnectedNodes() {
         System.out.println("Nós conectados:");
         for (NodeInfo nodeInfo : connectedNodes) {
