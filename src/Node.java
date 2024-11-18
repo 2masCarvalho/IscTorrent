@@ -20,7 +20,7 @@ public class Node {
         this.threadPool = Executors.newFixedThreadPool(5); // Ajustável conforme necessidade
     }
 
-    // Método para iniciar o servidor e aceitar conexões de outros nós
+    // Metodo para iniciar o servidor e aceitar conexões de outros nós
     public void startServer() throws IOException {
         serverSocket = new ServerSocket(port);
         System.out.println("Servidor iniciado na porta " + port);
@@ -33,7 +33,7 @@ public class Node {
         }
     }
 
-    // Método para estabelecer conexão com outro nó
+    // Metodo para estabelecer conexão com outro nó
     public boolean connectToNode(String ipAddress, int port) {
         try {
             Socket socket = new Socket();
@@ -50,13 +50,12 @@ public class Node {
         }
     }
 
-    // Método para lidar com conexões de clientes (outros nós conectando)
+    // Metodo para lidar com conexões de clientes (outros nós conectando)
     private void handleClientConnection(Socket clientSocket) {
         try {
             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
 
-            // Envia o nome do nó local para o nó conectado
             out.writeObject(nodeName);
             out.flush();
 
@@ -82,7 +81,7 @@ public class Node {
         }
     }
 
-    // Método para escutar mensagens de um nó conectado
+    // Metodo para escutar mensagens de um nó conectado
     private void listenForMessages(Socket socket) {
         try (ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
             while (true) {
@@ -96,7 +95,7 @@ public class Node {
         }
     }
 
-    // Método para enviar mensagem a todos os nós conectados
+    // Metodo para enviar mensagem a todos os nós conectados
     public void sendMessageToAll(String message) {
         for (NodeInfo nodeInfo : connectedNodes) {
             try {
@@ -109,7 +108,7 @@ public class Node {
         }
     }
 
-    // Método para imprimir todos os nós conectados
+    // Metodo para imprimir todos os nós conectados
     public void printConnectedNodes() {
         System.out.println("Nós conectados:");
         for (NodeInfo nodeInfo : connectedNodes) {

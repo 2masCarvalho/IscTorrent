@@ -8,10 +8,10 @@ import java.util.List;
 
 public class GUI {
 
-    private DefaultListModel<String> listModel; // Modelo para listar arquivos
-    private JList<String> resultList; // Lista de resultados na GUI
-    private FileManager fileManager; // Gerenciador de arquivos
-    private Node node; // Representa o nó da rede
+    private DefaultListModel<String> listModel;
+    private JList<String> resultList;
+    private FileManager fileManager;
+    private Node node;
 
     public GUI(String folderPath, int localPort) {
         try {

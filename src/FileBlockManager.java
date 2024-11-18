@@ -82,7 +82,7 @@ public class FileBlockManager {
     }
 
     public static void main(String[] args) {
-        File testFile = new File("files2/ficheiro de teste.txt");
+        File testFile = new File("files1/On Sight.mp3");
 
         if (testFile.exists() && testFile.isFile()) {
             List<FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
