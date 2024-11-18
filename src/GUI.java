@@ -1,6 +1,6 @@
 import javax.swing.*;
-        import java.awt.*;
-        import java.io.File;
+import java.awt.*;
+import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.io.IOException;
@@ -147,6 +147,7 @@ public class GUI {
         connectionDialog.setTitle("Conectar a um Nó");
         connectionDialog.setSize(300, 150);
         connectionDialog.setLayout(new GridLayout(3, 2));
+        connectionDialog.setModal(true); // Impede interações fora da janela
 
         JLabel addressLabel = new JLabel("Endereço:");
         JTextField addressField = new JTextField();
@@ -167,45 +168,34 @@ public class GUI {
 
         okButton.addActionListener(e -> {
             String address = addressField.getText();
-            String port = portField.getText();
-            System.out.println("Tentando conectar ao endereço: " + address + " na porta: " + port);
-
+            String portInput = portField.getText();
             try {
-                boolean isConnected = node.connectToNode(address, Integer.parseInt(port));
+                if (address.isEmpty() || portInput.isEmpty()) {
+                    JOptionPane.showMessageDialog(connectionDialog, "Por favor, insira o endereço e a porta.", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                int port = Integer.parseInt(portInput);
+                boolean isConnected = node.connectToNode(address, port);
                 if (isConnected) {
-                    JOptionPane.showMessageDialog(null, "Conectado ao nó " + address + ":" + port);
-                    node.printConnectedNodes(); // Exibe nós conectados
+                    JOptionPane.showMessageDialog(connectionDialog, "Conectado ao nó " + address + ":" + port);
+                    // Atualiza a lista de arquivos da GUI com os arquivos do nó remoto
+                    List<FileSearchResult> remoteFiles = node.getRemoteFileList();
+                    listModel.clear();
+                    for (FileSearchResult file : remoteFiles) {
+                        listModel.addElement(file.getFileName() + " (hash: " + file.getHash() + ")");
+                    }
                 } else {
-                    JOptionPane.showMessageDialog(null, "Não foi possível conectar ao nó " + address + ":" + port,
-                            "Erro de Conexão", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(connectionDialog, "Não foi possível conectar ao nó " + address + ":" + port, "Erro de Conexão", JOptionPane.ERROR_MESSAGE);
                 }
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(null, "Porta inválida.", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(connectionDialog, "Porta inválida. Deve ser um número.", "Erro", JOptionPane.ERROR_MESSAGE);
+            } finally {
+                connectionDialog.dispose();
             }
-
-            connectionDialog.dispose();
         });
 
+        connectionDialog.setLocationRelativeTo(null); // Centraliza a janela na tela
         connectionDialog.setVisible(true);
     }
-/*
-    public static void main(String[] args) {
-
-        String folderPath1 = "files1";
-        int port1 = 8081;
-
-        String folderPath2 = "files2";
-        int port2 = 8082;
-
-        new Thread(() -> {
-            GUI gui1 = new GUI(folderPath1, port1);
-            gui1.node.printConnectedNodes();
-        }).start();
-
-        new Thread(() -> {
-            GUI gui2 = new GUI(folderPath2, port2);
-            gui2.node.printConnectedNodes();
-        }).start();
-    }
- */
 }
