@@ -6,7 +6,7 @@ public class main2 {
 
         new Thread(() -> {
             GUI gui2 = new GUI(folderPath, port);
-            gui2.node.printConnectedNodes();
+            gui2.getNode().printConnectedNodes();
         }).start();
     }
 }

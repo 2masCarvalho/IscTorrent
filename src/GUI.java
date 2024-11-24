@@ -8,10 +8,14 @@ import java.util.List;
 
 public class GUI {
 
+    //Modelo que lista resultados
     private DefaultListModel<String> listModel;
+    //Lista gráfica para exibir os resultados
     private JList<String> resultList;
+    //Gere os Arquivos locais
     private FileManager fileManager;
-    Node node;
+    //Represnta o nó associado a este gui
+    private Node node;
 
     public GUI(String folderPath, int localPort) {
         try {
@@ -19,14 +23,14 @@ public class GUI {
             String localIPAddress = InetAddress.getLocalHost().getHostAddress();
             System.out.println("IP Local: " + localIPAddress);
 
-            // Criação do node
+            // Criação do node e inicialização o FileManager
             node = new Node(localIPAddress, localPort, "MyNode", folderPath);
             fileManager = new FileManager(folderPath);
 
             // Cria e exibe a interface gráfica
             createAndShowGUI(localIPAddress, localPort);
 
-            // Inicia o servidor em uma nova thread
+            // Inicia o servidor numa nova thread separada
             new Thread(() -> {
                 try {
                     node.startServer();
@@ -39,6 +43,9 @@ public class GUI {
             System.err.println("Erro ao obter o endereço IP loqcal.");
             e.printStackTrace();
         }
+    }
+    public Node getNode() {
+        return node;
     }
 
     // Configura e exibe a interface gráfica
