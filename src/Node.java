@@ -37,6 +37,14 @@ public class Node {
 
     // Método para estabelecer conexão com outro nó
     public boolean connectToNode(String ipAddress, int port) {
+        // Verifica se já está conectado ao nó
+        for (NodeInfo node : connectedNodes) {
+            if (node.getIpAddress().equals(ipAddress) && node.getPort() == port) {
+                System.err.println("Erro: Já está conectado ao nó " + ipAddress + ":" + port);
+                return false; // Impede a conexão
+            }
+        }
+
         try {
             // Cria o socket e conecta ao endereço remoto
             Socket socket = new Socket();

@@ -36,7 +36,7 @@ public class GUI {
             }).start();
 
         } catch (UnknownHostException e) {
-            System.err.println("Erro ao obter o endereço IP local.");
+            System.err.println("Erro ao obter o endereço IP loqcal.");
             e.printStackTrace();
         }
     }
