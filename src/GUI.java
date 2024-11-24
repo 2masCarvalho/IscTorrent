@@ -8,14 +8,10 @@ import java.util.List;
 
 public class GUI {
 
-    //Modelo que lista resultados
-    private DefaultListModel<String> listModel;
-    //Lista gráfica para exibir os resultados
-    private JList<String> resultList;
-    //Gere os Arquivos locais
-    private FileManager fileManager;
-    //Represnta o nó associado a este gui
-    private Node node;
+    private DefaultListModel<String> listModel; // Modelo que lista resultados
+    private JList<String> resultList; // Lista gráfica para exibir os resultados
+    private FileManager fileManager; // Gerencia os arquivos locais
+    private Node node; // Representa o nó associado a este GUI
 
     public GUI(String folderPath, int localPort) {
         try {
@@ -23,14 +19,14 @@ public class GUI {
             String localIPAddress = InetAddress.getLocalHost().getHostAddress();
             System.out.println("IP Local: " + localIPAddress);
 
-            // Criação do node e inicialização o FileManager
+            // Criação do nó e inicialização do FileManager
             node = new Node(localIPAddress, localPort, "MyNode", folderPath);
             fileManager = new FileManager(folderPath);
 
             // Cria e exibe a interface gráfica
             createAndShowGUI(localIPAddress, localPort);
 
-            // Inicia o servidor numa nova thread separada
+            // Inicia o servidor em uma thread separada
             new Thread(() -> {
                 try {
                     node.startServer();
@@ -40,10 +36,11 @@ public class GUI {
             }).start();
 
         } catch (UnknownHostException e) {
-            System.err.println("Erro ao obter o endereço IP loqcal.");
+            System.err.println("Erro ao obter o endereço IP local.");
             e.printStackTrace();
         }
     }
+
     public Node getNode() {
         return node;
     }
@@ -96,34 +93,49 @@ public class GUI {
         frame.setVisible(true);
         loadFilesFromFolder();
 
+        // Ação do botão "Procurar"
         searchButton.addActionListener(e -> {
-            String keyword = searchField.getText();
+            String keyword = searchField.getText().trim();
             if (keyword.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Digite uma palavra-chave para buscar.");
                 return;
             }
 
-            // Envia a mensagem de pesquisa para os nós conectados e busca localmente
-            List<FileSearchResult> results = node.searchFilesAcrossNodes(keyword);
+            new Thread(() -> {
+                try {
+                    // Envia a mensagem de pesquisa para os nós conectados e busca localmente
+                    List<FileSearchResult> results = node.searchFilesAcrossNodes(keyword);
 
-            // Atualiza a lista de resultados
-            listModel.clear();
-            if (results.isEmpty()) {
-                listModel.addElement("Nenhum arquivo encontrado.");
-            } else {
-                for (FileSearchResult result : results) {
-                    listModel.addElement(result.getFileName() + " (hash: " + result.getHash() + ")");
+                    SwingUtilities.invokeLater(() -> {
+                        listModel.clear();
+                        if (results.isEmpty()) {
+                            listModel.addElement("Nenhum arquivo encontrado.");
+                        } else {
+                            for (FileSearchResult result : results) {
+                                listModel.addElement(
+                                        result.getFileName() + " (hash: " + result.getHash() + ", node: " +
+                                                result.getNodeAddress() + ":" + result.getNodePort() + ")"
+                                );
+                            }
+                        }
+                    });
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
+                            frame,
+                            "Erro ao realizar a pesquisa: " + ex.getMessage(),
+                            "Erro",
+                            JOptionPane.ERROR_MESSAGE
+                    ));
                 }
-            }
+            }).start();
         });
     }
 
-    // Carrega arquivos da pasta para exibir na lista
     public void loadFilesFromFolder() {
         listModel.clear();
         File[] files = fileManager.getFiles();
 
-        if (files.length > 0) {
+        if (files != null && files.length > 0) {
             for (File file : files) {
                 listModel.addElement(file.getName());
             }
@@ -132,29 +144,21 @@ public class GUI {
         }
     }
 
-    // Realiza o descarregamento do arquivo selecionado
     private void unloadSelectedFile(JFrame frame) {
         String selectedFile = resultList.getSelectedValue();
         if (selectedFile != null) {
-            File testFile = new File("files/" + selectedFile);
-            if (testFile.exists() && testFile.isFile()) {
-                List<FileBlockManager.FileBlockRequestMessage> blockList = FileBlockManager.createBlockList(testFile);
-                FileBlockManager.iniciarDescarregamento(blockList);
-            } else {
-                JOptionPane.showMessageDialog(frame, "Ficheiro não encontrado.");
-            }
+            JOptionPane.showMessageDialog(frame, "Função de descarregamento não implementada ainda.");
         } else {
             JOptionPane.showMessageDialog(frame, "Nenhum ficheiro selecionado.");
         }
     }
 
-    // Mostra o diálogo de conexão para se conectar a um nó remoto
     private void showConnectionDialog() {
         JDialog connectionDialog = new JDialog();
         connectionDialog.setTitle("Conectar a um Nó");
         connectionDialog.setSize(300, 150);
         connectionDialog.setLayout(new GridLayout(3, 2));
-        connectionDialog.setModal(true); // Impede interações fora da janela
+        connectionDialog.setModal(true);
 
         JLabel addressLabel = new JLabel("Endereço:");
         JTextField addressField = new JTextField();
@@ -186,12 +190,13 @@ public class GUI {
                 boolean isConnected = node.connectToNode(address, port);
                 if (isConnected) {
                     JOptionPane.showMessageDialog(connectionDialog, "Conectado ao nó " + address + ":" + port);
-                    // Atualiza a lista de arquivos da GUI com os arquivos do nó remoto
-                    List<FileSearchResult> remoteFiles = node.getRemoteFileList();
-                    listModel.clear();
-                    for (FileSearchResult file : remoteFiles) {
-                        listModel.addElement(file.getFileName() + " (hash: " + file.getHash() + ")");
-                    }
+                    SwingUtilities.invokeLater(() -> {
+                        List<FileSearchResult> remoteFiles = node.getRemoteFileList();
+                        listModel.clear();
+                        for (FileSearchResult file : remoteFiles) {
+                            listModel.addElement(file.getFileName() + " (hash: " + file.getHash() + ")");
+                        }
+                    });
                 } else {
                     JOptionPane.showMessageDialog(connectionDialog, "Não foi possível conectar ao nó " + address + ":" + port, "Erro de Conexão", JOptionPane.ERROR_MESSAGE);
                 }
@@ -202,7 +207,7 @@ public class GUI {
             }
         });
 
-        connectionDialog.setLocationRelativeTo(null); // Centraliza a janela na tela
+        connectionDialog.setLocationRelativeTo(null);
         connectionDialog.setVisible(true);
     }
 }

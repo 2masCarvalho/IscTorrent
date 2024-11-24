@@ -88,14 +88,15 @@ public class Node {
 
     // Handles incoming connections from clients (other nodes)
     private void handleClientConnection(Socket clientSocket) {
-        try (ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
+        try (ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
 
             // Read the received object
             Object receivedObject = in.readObject();
 
             if (receivedObject instanceof NewConnectionRequest) {
                 NewConnectionRequest request = (NewConnectionRequest) receivedObject;
+                System.out.println("NewConnectionRequest received from: " + request);
 
                 // Check if already connected
                 for (NodeInfo node : connectedNodes) {
@@ -107,7 +108,7 @@ public class Node {
                     }
                 }
 
-                // Add the new node and respond
+                // Add the new node and respond with OK
                 NodeInfo newNode = new NodeInfo(request.getIpAddress(), request.getPort(), clientSocket);
                 connectedNodes.add(newNode);
                 System.out.println("Connection received from: " + request);
@@ -116,15 +117,16 @@ public class Node {
 
             } else if (receivedObject instanceof WordSearchMessage) {
                 WordSearchMessage searchMessage = (WordSearchMessage) receivedObject;
-                System.out.println("Search request received for: " + searchMessage.getKeyword() +
-                        " from node: " + searchMessage.getSenderNodeName());
+                System.out.println("Search request received for keyword: " + searchMessage.getKeyword());
 
-                // Perform local file search
+                // Realiza a busca local
                 List<FileSearchResult> results = searchFiles(searchMessage);
+                System.out.println("Local search completed. Files found: " + results.size());
 
-                // Send results back to the requesting node
+                // Envia os resultados de volta
                 out.writeObject(results);
                 out.flush();
+                System.out.println("Results sent back to requester.");
             }
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("Error handling client connection: " + e.getMessage());
@@ -135,7 +137,8 @@ public class Node {
     private List<FileSearchResult> searchFiles(WordSearchMessage searchMessage) {
         List<FileSearchResult> results = new ArrayList<>();
 
-        // Search local files for matches with the keyword
+        System.out.println("Performing local search for keyword: " + searchMessage.getKeyword());
+
         for (Map.Entry<String, String> entry : fileManager.getFileHashes().entrySet()) {
             if (entry.getKey().contains(searchMessage.getKeyword())) {
                 results.add(new FileSearchResult(
@@ -148,6 +151,8 @@ public class Node {
                 ));
             }
         }
+
+        System.out.println("Local search complete. Files found: " + results.size());
         return results;
     }
 
@@ -155,22 +160,24 @@ public class Node {
     public List<FileSearchResult> searchFilesAcrossNodes(String keyword) {
         List<FileSearchResult> allResults = new ArrayList<>();
 
-        // Add local results
+        // Adiciona resultados locais
+        System.out.println("Searching locally for keyword: " + keyword);
         WordSearchMessage localSearchMessage = new WordSearchMessage(keyword, nodeName);
         allResults.addAll(searchFiles(localSearchMessage));
 
-        // Search connected nodes
+        // Procura nos nós conectados
         for (NodeInfo nodeInfo : connectedNodes) {
             try {
+                System.out.println("Sending search request to node: " + nodeInfo.getIpAddress() + ":" + nodeInfo.getPort());
                 ObjectOutputStream out = new ObjectOutputStream(nodeInfo.getSocket().getOutputStream());
                 ObjectInputStream in = new ObjectInputStream(nodeInfo.getSocket().getInputStream());
 
-                // Send search message
+                // Envia a mensagem de busca
                 WordSearchMessage searchMessage = new WordSearchMessage(keyword, nodeName);
                 out.writeObject(searchMessage);
                 out.flush();
 
-                // Read results
+                // Recebe os resultados
                 Object response = in.readObject();
                 if (response instanceof List<?>) {
                     List<?> resultList = (List<?>) response;
@@ -179,13 +186,18 @@ public class Node {
                             allResults.add((FileSearchResult) obj);
                         }
                     }
+                    System.out.println("Results received from node: " + nodeInfo.getIpAddress() + ":" + nodeInfo.getPort());
+                } else {
+                    System.err.println("Invalid response received from node: " + nodeInfo.getIpAddress() + ":" + nodeInfo.getPort());
                 }
             } catch (IOException | ClassNotFoundException e) {
-                System.err.println("Error searching files on node " + nodeInfo.getIpAddress() + ":" + nodeInfo.getPort());
+                System.err.println("Error searching files on node " + nodeInfo.getIpAddress() + ":" + nodeInfo.getPort() + ": " + e.getMessage());
             }
         }
+
         return allResults;
     }
+
 
     // Prints all connected nodes
     public void printConnectedNodes() {
@@ -218,5 +230,19 @@ public class Node {
         public Socket getSocket() {
             return socket;
         }
+    }
+    // Método para imprimir os nós conectados periodicamente
+    public void startPeriodicNodeLogging() {
+        new Thread(() -> {
+            while (true) {
+                try {
+                    // Espera 10 segundos antes de imprimir novamente
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    System.err.println("Periodic logging interrupted: " + e.getMessage());
+                }
+                printConnectedNodes(); // Chama o método já existente
+            }
+        }).start();
     }
 }

@@ -35,17 +35,22 @@ public class FileManager {
         }
 
         File[] files = folder.listFiles();
+        System.out.println("Files in folder: " + folderPath);
         if (files != null) {
             for (File file : files) {
                 if (file.isFile()) {
+                    System.out.println(" - " + file.getName());
                     String hash = calculateHash(file);
                     if (hash != null) {
                         fileHashes.put(file.getName(), hash);
                     }
                 }
             }
+        } else {
+            System.out.println("No files found in folder: " + folderPath);
         }
     }
+
 
     /**
      * Calculates the hash (SHA-256) of a file.
